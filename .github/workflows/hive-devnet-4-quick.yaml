@@ -1,7 +1,7 @@
-name: Hive - BAL Quick
+name: Hive - BAL Devnet 4 Quick
 on:
   schedule:
-    - cron: "45 12 * * *"
+    - cron: "45 13 * * *"
   workflow_dispatch:
     inputs:
       client:
@@ -10,7 +10,7 @@ on:
         description: Comma-separated list of clients to test .e.g go-ethereum, besu, reth, nethermind, erigon, nimbus-el, ethrex
       simulator:
         type: string
-        # TODO: add back "ethereum/eels/consume-rlp" when clients have bal-devnet-3 branch
+        # TODO: add back "ethereum/eels/consume-rlp" when clients have bal-devnet-4 branch
         default: >-
           "ethereum/eels/consume-engine"
         description: >-
@@ -34,7 +34,7 @@ on:
         type: string
         description: >-
           If provided, this tag will be used for all clients, overriding individual tags/branches in client_repos and client_images
-        default: "bal-devnet-3"
+        default: "bal-devnet-4"
       client_repos:
         type: string
         default: |
@@ -64,8 +64,8 @@ env:
   GOPROXY: "${{ vars.GOPROXY }}"
   # Hive action environment variables
   S3_BUCKET: hive-results
-  S3_PATH: bal-quick
-  S3_PUBLIC_URL: https://hive.ethpandaops.io/#/test/bal-quick/
+  S3_PATH: bal-devnet-4-quick
+  S3_PUBLIC_URL: https://hive.ethpandaops.io/#/test/bal-devnet-4-quick/
   INSTALL_RCLONE_VERSION: v1.68.2
   # Flags used for all simulators
   GLOBAL_EXTRA_FLAGS: >-
@@ -102,16 +102,18 @@ jobs:
       fixtures_url: ${{ steps.latest.outputs.fixtures_url }}
       eels_branch: ${{ steps.latest.outputs.eels_branch }}
     steps:
-      - name: Set bal-devnet-3 fixtures and branch
+      - name: Get latest bal fixtures and branch
         id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # Pinned to the devnet-3 fixture release and EELS branch.
-          TAG="bal@v5.6.1"
+          # Tracks the latest bal fixture release and devnets/bal/N branch.
+          TAG=$(gh release list --repo ethereum/execution-spec-tests --json tagName --limit 100 | jq -r '[.[] | select(.tagName | startswith("bal"))][0].tagName')
           FIXTURES_URL="https://github.com/ethereum/execution-spec-tests/releases/download/${TAG}/fixtures_bal.tar.gz"
           echo "fixtures_url=$FIXTURES_URL" >> "$GITHUB_OUTPUT"
           echo "Using fixtures from: $FIXTURES_URL"
 
-          BRANCH="devnets/bal/3"
+          BRANCH=$(gh api repos/ethereum/execution-specs/branches --paginate -q '.[].name' | grep -E '^devnets/bal/[0-9]+$' | sort -t/ -k3 -n | tail -1)
           echo "eels_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "Using EELS branch: $BRANCH"
 
@@ -121,7 +123,7 @@ jobs:
         with:
           client_repos: ${{ inputs.client_repos }}
           client_images: ${{ inputs.client_images }}
-          common_client_tag: ${{ inputs.common_client_tag || 'bal-devnet-3' }}
+          common_client_tag: ${{ inputs.common_client_tag || 'bal-devnet-4' }}
           client_source: ${{ inputs.client_source || 'git' }}
           hive_version: ${{ inputs.hive_version || 'ethereum/hive@master' }}
           goproxy: ${{ env.GOPROXY }}
@@ -158,7 +160,7 @@ jobs:
             "reth",
             "ethrex"
           '))}}
-        # TODO: add back "ethereum/eels/consume-rlp" when clients have bal-devnet-3 branch
+        # TODO: add back "ethereum/eels/consume-rlp" when clients have bal-devnet-4 branch
         simulator: >-
           ${{ fromJSON(format('[{0}]', inputs.simulator || '
             "ethereum/eels/consume-engine"

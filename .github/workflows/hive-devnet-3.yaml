@@ -131,19 +131,16 @@ jobs:
       fixtures_url: ${{ steps.latest.outputs.fixtures_url }}
       eels_branch: ${{ steps.latest.outputs.eels_branch }}
     steps:
-      - name: Get latest bal fixtures and branch
+      - name: Set bal-devnet-3 fixtures and branch
         id: latest
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          # Get latest bal fixtures release from EEST
-          TAG=$(gh release list --repo ethereum/execution-spec-tests --json tagName --limit 100 | jq -r '[.[] | select(.tagName | startswith("bal"))][0].tagName')
+          # Pinned to the devnet-3 fixture release and EELS branch.
+          TAG="bal@v5.6.1"
           FIXTURES_URL="https://github.com/ethereum/execution-spec-tests/releases/download/${TAG}/fixtures_bal.tar.gz"
           echo "fixtures_url=$FIXTURES_URL" >> "$GITHUB_OUTPUT"
           echo "Using fixtures from: $FIXTURES_URL"
 
-          # Get latest devnets/bal/N branch from EELS (highest number)
-          BRANCH=$(gh api repos/ethereum/execution-specs/branches --paginate -q '.[].name' | grep -E '^devnets/bal/[0-9]+$' | sort -t/ -k3 -n | tail -1)
+          BRANCH="devnets/bal/3"
           echo "eels_branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "Using EELS branch: $BRANCH"
 
